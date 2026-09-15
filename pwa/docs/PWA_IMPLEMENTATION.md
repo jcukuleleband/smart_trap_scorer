@@ -1,14 +1,24 @@
 # PWA implementation record
 
-Status: local development implementation, 2026-09-14. User direction: implement the PWA; omit QR login. This authorizes implementation work and explicitly defers QR login. It does not approve unspecified production policies or establish production readiness.
+Status: draft deployment implementation, updated 2026-09-15. User direction: implement the PWA; omit QR login. This authorizes implementation work and explicitly defers QR login. It does not approve unspecified production policies or establish production readiness.
 
 ## Design allocation
 
-- `public/app.js`: DOM-based scorer workflow and same-origin API client. Dynamic content uses text nodes, not HTML interpolation.
+- `public/app.js`: DOM-based scorer workflow and configured API client. Local
+  development uses the same origin; a Pages build may use an explicitly
+  configured HTTPS API. Dynamic content uses text nodes, not HTML interpolation.
+- `public/api.js`: validates the public API base URL and constructs requests
+  without putting credentials or access codes in URLs.
 - `public/queue.js`: IndexedDB transactions and AES-GCM packages; encrypted context and original bytes; stable retry identities; persisted non-exportable key.
-- `public/sw.js`: versioned static shell only. No API caching and no forced activation during an active session.
-- `server.mjs`: dependency-free loopback development backend with typed-code sessions, CSRF token, serial writes, upload identity conflicts, manual scoring, and approval history.
-- `tests/server.test.mjs`: functional integrity and access-control checks.
+- `public/sw.js`: project-scoped, versioned static shell only. No API or runtime
+  configuration caching and no forced activation during an active session.
+- `server.mjs`: dependency-free development backend with typed-code sessions,
+  CSRF token, exact-origin CORS controls, configurable secure cookie attributes,
+  serial writes, upload identity conflicts, manual scoring, and approval history.
+- `scripts/build-pages.mjs`: creates the static Pages artifact and injects only
+  the validated public API URL.
+- `tests/server.test.mjs` and `tests/pages.test.mjs`: functional integrity,
+  access-control, cross-origin, scoped-path, and cache-isolation checks.
 
 No production framework/provider or AI-model selection has been made. No external service is called. The development event and single-row manual review are fixtures for exercising the frontend/backend boundary.
 
@@ -20,8 +30,8 @@ No production framework/provider or AI-model selection has been made. No externa
 | PWA-CP | Camera permission/fallback, overlay, manual shutter, original preview, full-size inspection, readability confirmation, camera shutdown | Automatic shutter, real defect detection, corner detection/correction, templates and sheet QR |
 | PWA-UP | Encrypted bounded pending storage, durable local transaction before queue display, foreground retries, stable identity and reconciliation, purge after acknowledgment | Approved key/retention policy, age limits, recovery tests, production durability, cross-tab deletion race coordination |
 | PWA-RV | Server inventory, manual 25-cell review, reasons, versioned saves, deterministic server scores, explicit confirmation, no client publication | AI/multi-row results, full manager referrals, evidence crops, automatic status polling, complete offline session UX |
-| PWA-SE | No service credentials, CSRF, restrictive CSP, no generic private-data cache, text rendering | Production TLS/Secure cookies, full threat review, private-origin separation, image sanitization and encrypted backend storage |
-| PWA-OP | Static offline shell, app version, no forced service-worker activation | Migration/rollback compatibility protocol, fresh-offline capture initialization |
+| PWA-SE | No service credentials, CSRF, restrictive CSP, exact-origin credentialed CORS, configurable Secure/SameSite cookies, no generic private-data cache, text rendering | Production TLS termination and configuration verification, full threat review, manager/public-origin separation, image sanitization and encrypted backend storage |
+| PWA-OP | Project-scoped static offline shell, app version, no forced service-worker activation, reproducible Pages artifact and draft deployment workflow | Production backend deployment, migration/rollback compatibility protocol, fresh-offline capture initialization |
 | PWA-QA | Responsive layout, labels, keyboard controls, visible status and manual image inspection | Device field trials, screen-reader audit, formal accessibility checks, load/memory/timing evidence |
 
 ## Development policy defaults
@@ -33,7 +43,12 @@ Sign-out clears active private review data and terminates the server session whi
 ## Evidence
 
 - JavaScript syntax checks: passed.
-- Automated server/scoring integration tests: passed, including concurrent duplicate requests and version conflicts.
+- Automated server/scoring integration tests: passed, including concurrent
+  duplicate requests, version conflicts, credentialed preflight, secure cookie
+  attributes, CSRF rejection, project-scoped paths, and cache isolation.
+- Pages artifact build: passed with both an absent backend configuration and a
+  representative HTTPS API URL. The absent configuration fails closed in the
+  browser by disabling login.
 - Real-browser camera, IndexedDB encryption/restart, service-worker install/offline/update, and visual/accessibility validation: **not yet executed** in this environment.
 - Production release gates: **not passed**. The parent requirement and decision registers remain open.
 

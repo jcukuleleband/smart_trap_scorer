@@ -23,6 +23,33 @@ Open **http://localhost:4173** and enter **FIELD-DEMO**. Use sample images only.
 
 The server binds to loopback only. Mobile-camera testing requires a separate HTTPS development setup; a phone's `localhost` is the phone itself. This repository does not configure a public deployment.
 
+## Draft GitHub Pages deployment
+
+The static scorer shell can be published from the `feature/draft_pwa` branch by
+the GitHub Actions workflow in `.github/workflows/pwa-pages.yml`. The workflow
+builds the contents of `public/` into `dist/`, keeps every application path
+relative to the Pages project scope, and writes the backend URL to the generated
+`config.json`.
+
+Before dispatching the workflow, define the repository variable
+`PWA_API_BASE_URL` as the absolute HTTPS URL of the scorer API, including its
+API path. For example: `https://api.example.com/api/`. The value is public
+deployment configuration, not a credential. If it is absent, the Pages shell
+still deploys but disables login and explains that the backend is not
+configured.
+
+The API deployment must use matching settings:
+
+- `API_PUBLIC_ORIGIN`: the API's exact HTTPS origin, without a path.
+- `PWA_ALLOWED_ORIGINS`: the Pages site's exact HTTPS origin. Multiple origins
+  may be comma-separated.
+- `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=None` when the Pages site and API
+  are on different sites.
+
+The included backend remains a development fixture and stores data on local
+disk. Publishing the static shell does not make that backend production-ready.
+Do not expose it publicly or process real participant data with it.
+
 ## Checks
 
 Run these commands from `pwa/`.
@@ -42,6 +69,12 @@ Tests use a temporary local HTTP port and temporary data directory. They cover d
 - Atomic local queue-count/byte checks: 10 photos, 50 MB total, 12 MB per image. These are development defaults awaiting requirements approval.
 - Stable submission identities, retry/reconciliation, and no false claim that completed transport means receipt.
 - Application-shell caching only; API/private evidence is not cached by the service worker.
+- Project-scoped static paths and service-worker caches suitable for a GitHub
+  Pages project site; backend configuration is deliberately excluded from the
+  offline cache.
+- Optional credentialed cross-origin API access with an exact HTTPS origin
+  allowlist, CORS preflight validation, CSRF enforcement, and configurable
+  Secure/SameSite cookie attributes.
 - Explicit server-side manual calculation and confirmation; no AI arithmetic or publication.
 
 ## Important boundaries

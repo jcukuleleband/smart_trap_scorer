@@ -25,3 +25,8 @@ npm test
 ```
 
 See the [PWA README](pwa/README.md) for setup and development limitations, and the [implementation record](pwa/docs/PWA_IMPLEMENTATION.md) for requirement coverage.
+
+The draft GitHub Pages packaging and deployment workflow is documented in the
+[PWA README](pwa/README.md#draft-github-pages-deployment). It publishes only the
+static scorer shell; a separately operated HTTPS API is required for login and
+protected scorer operations.
