@@ -1,0 +1,1 @@
+{"name":"trap-scorer-pwa","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test","check":"node --check server.mjs && node --check public/app.js && node --check public/queue.js && node --check public/sw.js"},"engines":{"node":">=18"}}

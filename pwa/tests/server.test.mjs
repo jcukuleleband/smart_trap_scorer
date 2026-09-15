@@ -1,0 +1,22 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { createApp, score } from '../server.mjs';
+test('deterministic score requires exactly 25 known classifications',()=>{assert.equal(score(Array(25).fill('hit')),25);assert.equal(score(Array(25).fill('miss')),0);assert.equal(score(['miss',...Array(24).fill('hit')]),24);assert.equal(score(Array(25).fill('uncertain')),null);assert.throws(()=>score(Array(24).fill('hit')));assert.throws(()=>score(Array(25).fill('yes')));});
+test('authenticated durable upload, retry conflict, versioned correction and approval',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'fieldbook-test-'));const server=await createApp({dataDir:dir});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(async()=>{server.closeAllConnections();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});});const base=`http://127.0.0.1:${server.address().port}`;
+ assert.equal((await fetch(base+'/api/sheets')).status,401);
+ const login=await fetch(base+'/api/session',{method:'POST',body:JSON.stringify({code:'FIELD-DEMO'})});const cookie=login.headers.get('set-cookie').split(';')[0];const {csrf}=await login.json();const auth={Cookie:cookie,'X-CSRF-Token':csrf};
+ assert.equal((await fetch(base+'/api/session',{method:'DELETE',headers:{Cookie:cookie}})).status,403);
+ const id=randomUUID();const headers={...auth,'Content-Type':'image/png','X-Submission-Id':id,'X-Sheet-Context':encodeURIComponent(JSON.stringify({eventId:'development-night',squad:'Squad 01',sheet:'Round 1'}))};const image=Buffer.from('89504e470d0a1a0a00000000','hex');
+ const results=await Promise.all([1,2].map(()=>fetch(base+'/api/sheets',{method:'POST',headers,body:image})));for(const r of results)assert.equal(r.status,200);
+ assert.equal((await (await fetch(base+'/api/sheets',{headers:auth})).json()).length,1);
+ assert.equal((await fetch(base+'/api/sheets',{method:'POST',headers,body:Buffer.concat([image,Buffer.from('different')])})).status,409);
+ const patch=await fetch(base+`/api/sheets/${id}`,{method:'PATCH',headers:auth,body:JSON.stringify({version:1,participant:'Sample scorer',reason:'Manual fixture',cells:['miss',...Array(24).fill('hit')]})});assert.equal(patch.status,200);assert.equal((await patch.json()).score,24);
+ assert.equal((await fetch(base+`/api/sheets/${id}/confirm`,{method:'POST',headers:auth,body:JSON.stringify({version:1})})).status,409);
+ const confirmed=await fetch(base+`/api/sheets/${id}/confirm`,{method:'POST',headers:auth,body:JSON.stringify({version:2})});assert.equal((await confirmed.json()).status,'Verified');
+ assert.equal((await fetch(base+`/api/sheets/${id}/image`,{headers:auth})).headers.get('cache-control'),'no-store');
+});
