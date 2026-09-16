@@ -20,3 +20,15 @@ test('authenticated durable upload, retry conflict, versioned correction and app
  const confirmed=await fetch(base+`/api/sheets/${id}/confirm`,{method:'POST',headers:auth,body:JSON.stringify({version:2})});assert.equal((await confirmed.json()).status,'Verified');
  assert.equal((await fetch(base+`/api/sheets/${id}/image`,{headers:auth})).headers.get('cache-control'),'no-store');
 });
+test('configured Pages origin supports credentialed preflight and secure cookies without weakening CSRF',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'fieldbook-cors-'));const origin='https://scorer.example.com';
+ const server=await createApp({dataDir:dir,publicOrigin:'https://api.example.com',allowedOrigins:[origin],secureCookies:true,sameSite:'None'});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(async()=>{server.closeAllConnections();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});});
+ const base=`http://127.0.0.1:${server.address().port}`;
+ const preflight=await fetch(base+'/api/sheets',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type,x-submission-id,x-sheet-context,x-csrf-token'}});
+ assert.equal(preflight.status,204);assert.equal(preflight.headers.get('access-control-allow-origin'),origin);assert.equal(preflight.headers.get('access-control-allow-credentials'),'true');
+ assert.equal((await fetch(base+'/api/session',{method:'POST',headers:{Origin:'https://attacker.example'},body:'{}'})).status,403);
+ const login=await fetch(base+'/api/session',{method:'POST',headers:{Origin:origin},body:JSON.stringify({code:'FIELD-DEMO'})});assert.equal(login.status,200);const cookie=login.headers.get('set-cookie');assert.match(cookie,/Secure/);assert.match(cookie,/SameSite=None/);
+ const denied=await fetch(base+'/api/session',{method:'DELETE',headers:{Origin:origin,Cookie:cookie.split(';')[0]}});assert.equal(denied.status,403);assert.equal(denied.headers.get('access-control-allow-origin'),origin);
+ const {csrf}=await login.json();const logout=await fetch(base+'/api/session',{method:'DELETE',headers:{Origin:origin,Cookie:cookie.split(';')[0],'X-CSRF-Token':csrf}});assert.equal(logout.status,200);assert.match(logout.headers.get('set-cookie'),/Secure/);
+});

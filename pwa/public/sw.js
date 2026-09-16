@@ -1,9 +1,11 @@
-const CACHE = 'fieldbook-shell-v1';
-const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/queue.js', '/manifest.webmanifest', '/icon.svg'];
+const PREFIX = `fieldbook:${self.registration.scope}:`;
+const CACHE = `${PREFIX}shell-v2`;
+const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'api.js', 'queue.js', 'manifest.webmanifest', 'icon.svg']
+  .map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))));
-self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('fieldbook-shell-') && k !== CACHE).map(k => caches.delete(k))))));
+self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith(PREFIX) && k !== CACHE).map(k => caches.delete(k))))));
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin || !ASSETS.includes(url.pathname)) return;
-  event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(url.pathname)) || fetch(event.request)));
+  // Only exact shell URLs: no API, private evidence, configuration, or query URLs.
+  if (event.request.method !== 'GET' || !ASSETS.includes(event.request.url)) return;
+  event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(event.request.url)) || fetch(event.request)));
 });
