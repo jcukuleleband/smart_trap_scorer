@@ -53,3 +53,19 @@ Sign-out clears active private review data and terminates the server session whi
 - Production release gates: **not passed**. The parent requirement and decision registers remain open.
 
 Before production, replace the fixture backend with the approved ingestion/review interfaces, close the listed gaps, and execute the PWA verification cases on the supported browser/device matrix. Paper/manual scoring remains the official fallback.
+
+## Standalone Pages usability mode (2026-09-15)
+
+User direction: simplify deployment for usability testing. Pages now builds from
+`main`; an absent API URL explicitly selects `mode.js` demo mode at build time.
+The normal API mode remains available when a URL is supplied. Demo startup does
+not depend on runtime configuration or authentication, including offline relaunch.
+
+`demo.js` implements a device-local sample workflow using a separate IndexedDB
+store. It retains original blobs for review, calculates a non-authoritative demo
+score, and checks record versions before corrections/confirmation. Saved demo
+records are plaintext sample data, bounded to ten sheets / 50 MB. Pending demo
+packages use a separate encrypted queue so they cannot be uploaded to a real event.
+The banner explains local-only storage and supplies a reset control. This is a
+usability exception, not implementation evidence for production authorization,
+server scoring, encryption at rest, durable receipt, audit, or publication.

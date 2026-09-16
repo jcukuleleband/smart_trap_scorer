@@ -1,3 +1,4 @@
+import { demoMode } from './mode.js';
 export const MAX_FILE = 12 * 1024 * 1024;
 export const MAX_BYTES = 50 * 1024 * 1024;
 export const MAX_COUNT = 10;
@@ -5,7 +6,7 @@ let database;
 function request(req) { return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
 async function db() {
   if (!database) database = await new Promise((resolve, reject) => {
-    const req = indexedDB.open('fieldbook-pending', 1);
+    const req = indexedDB.open(demoMode ? 'fieldbook-demo-pending' : 'fieldbook-pending', 1);
     req.onupgradeneeded = () => { req.result.createObjectStore('pending', { keyPath: 'id' }); req.result.createObjectStore('keys'); };
     req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
   });
