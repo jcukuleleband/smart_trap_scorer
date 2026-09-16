@@ -9,6 +9,7 @@ if (value) {
 }
 await mkdir(output, { recursive: true });
 await cp(new URL('../public/', import.meta.url), output, { recursive: true });
+await writeFile(new URL('../dist/mode.js', import.meta.url), `export const demoMode = ${!value};\n`);
 await writeFile(new URL('../dist/config.json', import.meta.url), JSON.stringify({ apiBaseUrl: value }) + '\n');
 await writeFile(new URL('../dist/.nojekyll', import.meta.url), '');
-console.log(value ? 'Pages artifact ready with configured backend.' : 'Pages artifact ready; login will show that a backend must be configured.');
+console.log(value ? 'Pages artifact ready with configured backend.' : 'Pages usability demo ready; no backend needed.');

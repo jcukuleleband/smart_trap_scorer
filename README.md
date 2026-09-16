@@ -26,7 +26,15 @@ npm test
 
 See the [PWA README](pwa/README.md) for setup and development limitations, and the [implementation record](pwa/docs/PWA_IMPLEMENTATION.md) for requirement coverage.
 
-The draft GitHub Pages packaging and deployment workflow is documented in the
-[PWA README](pwa/README.md#draft-github-pages-deployment). It publishes only the
-static scorer shell; a separately operated HTTPS API is required for login and
-protected scorer operations.
+## Usability testing on GitHub Pages
+
+The Pages workflow deploys from `main`. In repository **Settings > Pages**, select
+**GitHub Actions**. Leave `PWA_API_BASE_URL` unset for the browser-only demo.
+
+Open https://jcukuleleband.github.io/smart_trap_scorer/ after the workflow succeeds.
+No login or backend is needed. Capture a sample sheet, save it, open **Saved
+sheets**, enter one participant's 25 targets, save, and confirm the review.
+Photos and reviews stay on that browser; **Clear demo data** resets the demo.
+This tests usability, not production security, AI extraction, or official scoring.
+
+See the [PWA README](pwa/README.md#github-pages-usability-demo) for details.

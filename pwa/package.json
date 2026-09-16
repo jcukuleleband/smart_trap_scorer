@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test",
-    "check": "node --check server.mjs && node --check public/app.js && node --check public/queue.js && node --check public/sw.js && node --check public/api.js && node --check scripts/build-pages.mjs",
+    "check": "node --check server.mjs && node --check public/app.js && node --check public/queue.js && node --check public/sw.js && node --check public/api.js && node --check public/demo.js && node --check public/mode.js && node --check scripts/build-pages.mjs",
     "build:pages": "node scripts/build-pages.mjs"
   },
   "engines": {

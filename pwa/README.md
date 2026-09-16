@@ -21,22 +21,35 @@ Open **http://localhost:4173** and enter **FIELD-DEMO**. Use sample images only.
 4. Open **Submitted sheets**, select a sheet, and manually enter one participant's 25 target results. Click a target to cycle uncertain → hit → miss.
 5. Save with a reason, inspect the server-calculated score, then confirm the reviewed version.
 
-The server binds to loopback only. Mobile-camera testing requires a separate HTTPS development setup; a phone's `localhost` is the phone itself. This repository does not configure a public deployment.
+The server binds to loopback only. Mobile-camera testing requires a separate HTTPS development setup; a phone's `localhost` is the phone itself. The separate Pages workflow publishes the static app; it does not deploy this backend.
 
-## Draft GitHub Pages deployment
+## GitHub Pages usability demo
 
-The static scorer shell can be published from the `feature/draft_pwa` branch by
+The static scorer shell can be published from the `main` branch by
 the GitHub Actions workflow in `.github/workflows/pwa-pages.yml`. The workflow
 builds the contents of `public/` into `dist/`, keeps every application path
 relative to the Pages project scope, and writes the backend URL to the generated
 `config.json`.
 
-Before dispatching the workflow, define the repository variable
+For usability testing, leave `PWA_API_BASE_URL` unset. The build then runs entirely
+in the browser, opens the practice event without a code, and saves sample photos
+and reviews in a separate IndexedDB database on that device. No photos are sent
+to a server. Use **Clear demo data** to remove saved demo sheets and pending photos.
+Saved demo records are not encrypted, shared, backed up, or official. Pending
+packages use a separate encrypted demo queue. Browser storage can be cleared or
+evicted. AI extraction and the full system requirements are not part of this demo.
+
+One-time setup: in repository **Settings > Pages**, select **GitHub Actions** as
+the source. Push to `main` or run **Publish draft PWA to Pages** in Actions. Open
+https://jcukuleleband.github.io/smart_trap_scorer/ on a phone or desktop. After a
+first online visit and service-worker installation, the demo can reopen offline.
+Close all old app tabs and reopen to activate an updated cached application.
+
+To test against a separately hosted API instead, define the repository variable
 `PWA_API_BASE_URL` as the absolute HTTPS URL of the scorer API, including its
 API path. For example: `https://api.example.com/api/`. The value is public
-deployment configuration, not a credential. If it is absent, the Pages shell
-still deploys but disables login and explains that the backend is not
-configured.
+deployment configuration, not a credential. If it is absent, the standalone usability demo is selected. An invalid configured
+API does not silently switch to demo mode.
 
 The API deployment must use matching settings:
 
