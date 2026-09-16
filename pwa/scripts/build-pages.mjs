@@ -2,7 +2,9 @@ import { cp, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolveApiBase } from '../public/api.js';
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
-const value = process.env.PWA_API_BASE_URL || '';
+const configured = (process.env.PWA_API_BASE_URL || '').trim();
+// Accept the literal placeholder used during the initial usability deployment.
+const value = configured.toLowerCase() === 'blank' ? '' : configured;
 if (value) {
   if (!value.startsWith('https://')) throw new Error('Pages requires an absolute HTTPS PWA_API_BASE_URL, including the API path.');
   resolveApiBase(value, 'https://example.invalid/');
