@@ -3,7 +3,7 @@ import * as queue from './queue.js';
 import { demoMode } from './mode.js';
 import { demoApi, clearDemo } from './demo.js';
 const $ = id => document.getElementById(id);
-let apiBase, evidenceURL, session, stream, selected, objectURL, currentRecord, values = [], syncing = false;
+let apiBase, evidenceURL, session, stream, selected, objectURL, currentRecord, values = [], syncing = false, cameraRequest = 0;
 function notice(message = '') { $('notice').textContent = message; }
 function element(tag, text, className) { const e = document.createElement(tag); e.textContent = text; if (className) e.className = className; return e; }
 function action(text, callback) { const b = element('button', text); b.type='button'; b.addEventListener('click', () => run(callback)); return b; }
@@ -16,17 +16,17 @@ async function api(path, options = {}) {
   if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('Backend returned an unexpected response. Check the configured API URL.');
   const data = await response.json(); if (!response.ok) { const e = new Error(data.error || 'Request failed'); e.status=response.status; if(response.status===401) notice('Your session ended. Sign in again to send pending photos.'); throw e; } return data;
 }
-function stopCamera() { stream?.getTracks().forEach(t=>t.stop()); stream=null; $('video').srcObject=null; $('video').hidden=true; $('frame').hidden=true; $('camera-empty').hidden=false; $('shutter').hidden=true; }
+function stopCamera() { cameraRequest++; stream?.getTracks().forEach(t=>t.stop()); stream=null; $('video').srcObject=null; $('video').hidden=true; $('frame').hidden=true; $('camera-empty').hidden=false; $('shutter').hidden=true; }
 function tab(name) { stopCamera(); for(const id of ['capture','preview','queue','records','review']) $(id).hidden=id!==name; document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===name?'page':'false')); if(name==='queue') run(renderQueue); if(name==='records') run(refreshRecords); }
 function showSession() {
  $('login').hidden=!(!session); $('workspace').hidden=!session;
  if(!session)return; $('event-name').textContent=session.event.name; $('event-date').textContent=session.event.date; $('mode').textContent=demoMode ? 'Usability demo: this device only. No AI or official results.' : 'Development event · manual transcription · no official publication';
  $('squad').replaceChildren(...session.event.squads.map(s=>{const o=element('option',s);o.value=s;return o;})); tab('capture');
 }
-function clearSelected(){ if(objectURL)URL.revokeObjectURL(objectURL); objectURL=null; selected=null; $('file').value=''; $('preview-image').removeAttribute('src'); $('preview-link').removeAttribute('href'); }
+function clearSelected(){ if(objectURL)URL.revokeObjectURL(objectURL); objectURL=null; selected=null; $('file').value=''; $('camera-file').value=''; $('preview-image').removeAttribute('src'); $('preview-link').removeAttribute('href'); }
 async function preview(file) {
- if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>queue.MAX_FILE)throw new Error('Choose a JPEG, PNG or WebP photo up to 12 MB.');
- const bitmap=await createImageBitmap(file); const width=bitmap.width,height=bitmap.height;bitmap.close();
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>queue.MAX_FILE)throw new Error('Use a JPEG, PNG or WebP photo up to 12 MB. If your phone returned HEIC/HEIF, export it as JPEG and choose that photo.');
+ const dimensions=await imageDimensions(file); const {width,height}=dimensions;
  if(width*height>40000000)throw new Error('This photo is too large to process. Use a photo under 40 megapixels.');
  clearSelected(); selected=file; objectURL=URL.createObjectURL(file);$('preview-image').src=objectURL;$('preview-link').href=objectURL;$('complete').checked=false;
  $('quality').replaceChildren(element('li',`${width} × ${height} pixels · ${(file.size/1024/1024).toFixed(1)} MB`),element('li',Math.min(width,height)<1200?'Low resolution — retaking closer is recommended.':'Resolution check passed.'),element('li','Check all four corners, focus, glare and shadow yourself.'));
@@ -35,8 +35,31 @@ async function preview(file) {
 $('login-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{const code=$('code').value;$('code').value='';session=await api('/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});notice();showSession();await renderQueue();await sync();});});
 $('signout').addEventListener('click',()=>run(async()=>{await api('/session',{method:'DELETE'});session=null;stopCamera();clearSelected();$('record-list').replaceChildren();if(evidenceURL)URL.revokeObjectURL(evidenceURL);evidenceURL=null;$('evidence').removeAttribute('src');$('participant').value='';$('reason').value='';$('cells').replaceChildren();currentRecord=null;values=[];showSession();notice('Signed out. Encrypted pending photos remain on this device for the same event.');}));
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
-$('camera').addEventListener('click',()=>run(async()=>{stopCamera();if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera access needs HTTPS or localhost. You can choose a photo instead.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:2400}},audio:false});$('video').srcObject=stream;$('video').hidden=false;$('frame').hidden=false;$('camera-empty').hidden=true;$('shutter').hidden=false;}));
-$('shutter').addEventListener('click',()=>run(async()=>{const v=$('video');if(!v.videoWidth)throw new Error('Camera is still starting. Try again.');const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);const blob=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.94));await preview(blob);}));
+$('phone-camera').addEventListener('click',()=>{
+ stopCamera(); notice(); $('camera-file').value=''; $('camera-file').click();
+});
+$('camera-file').addEventListener('change',()=>run(async()=>{
+ const file=$('camera-file').files[0]; if(file)await preview(file);
+}));
+$('camera').addEventListener('click',()=>run(async()=>{
+ stopCamera(); const request=cameraRequest; notice('Starting camera...');
+ try {
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Live camera is unavailable. Use Take photo or Choose a photo. Open this site in your phone browser over HTTPS.');
+  const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+  if(request!==cameraRequest){acquired.getTracks().forEach(track=>track.stop());return;}
+  stream=acquired; const video=$('video'); video.muted=true; video.playsInline=true;
+  video.srcObject=stream; video.hidden=false; $('frame').hidden=false; $('camera-empty').hidden=true;
+  await video.play();
+  if(request!==cameraRequest)return;
+  $('shutter').hidden=false; notice();
+ } catch(error) {
+  if(request!==cameraRequest)return;
+  stopCamera();
+  const messages={NotAllowedError:'Camera permission was blocked. Allow camera access in your browser site settings, or use Take photo.',NotFoundError:'No live camera was found. Use Take photo or Choose a photo.',NotReadableError:'The camera could not start. Close other camera apps, then retry or use Take photo.'};
+  throw new Error(messages[error.name] || error.message || 'Camera could not start. Use Take photo or Choose a photo.');
+ }
+}));
+$('shutter').addEventListener('click',()=>run(async()=>{const v=$('video');if(!v.videoWidth)throw new Error('Camera is still starting. Try again.');const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);const blob=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.94));if(!blob)throw new Error('Unable to capture this frame. Use Take photo instead.');await preview(blob);}));
 $('file').addEventListener('change',()=>run(async()=>{if($('file').files[0])await preview($('file').files[0]);}));
 $('retake').addEventListener('click',()=>{clearSelected();tab('capture');});
 $('submit-photo').addEventListener('click',()=>run(async()=>{if(!selected||!$('complete').checked)throw new Error('Confirm that the full sheet and every mark are readable.');if(!$('sheet').value.trim()){tab('capture');$('sheet').focus();throw new Error('Add a sheet reference before submitting.');}const b=$('submit-photo');b.disabled=true;try{await queue.enqueue(selected,{eventId:session.event.id,squad:$('squad').value,sheet:$('sheet').value.trim(),type:selected.type});clearSelected();tab('queue');notice(demoMode ? 'Saved locally for demo review.' : 'Saved in the encrypted pending queue. Waiting for server receipt.');await sync();}finally{b.disabled=false;}}));
@@ -76,3 +99,16 @@ $('clear-demo').addEventListener('click',()=>run(async()=>{
   for(const row of await queue.list())await queue.remove(row.id);
   location.reload();
 }));
+
+async function imageDimensions(file) {
+ // Image loading also works in browsers without createImageBitmap support.
+ const url=URL.createObjectURL(file);
+ try {
+  return await new Promise((resolve,reject)=>{
+   const img=new Image();
+   img.onload=()=>resolve({width:img.naturalWidth,height:img.naturalHeight});
+   img.onerror=()=>reject(new Error('This photo cannot be opened. Try a JPEG photo or retake it.'));
+   img.src=url;
+  });
+ } finally { URL.revokeObjectURL(url); }
+}

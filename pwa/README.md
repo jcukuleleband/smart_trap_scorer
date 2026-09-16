@@ -49,6 +49,14 @@ https://jcukuleleband.github.io/smart_trap_scorer/ on a phone or desktop. After 
 first online visit and service-worker installation, the demo can reopen offline.
 Close all old app tabs and reopen to activate an updated cached application.
 
+For phone capture, use **Take photo** to request the phone's native camera
+(some browsers offer a file picker). **Live camera preview** is an optional
+in-page camera with permission recovery messages; **Choose a photo** remains
+available. Returned images must be JPEG, PNG or WebP, up to 12 MB; export HEIC
+photos as JPEG if necessary. The camera update is labeled `v0.2` in the footer.
+After deploying it, reload online, close all app tabs/installed app windows, and
+reopen so the waiting service worker can activate without clearing saved data.
+
 To test against a separately hosted API instead, define the repository variable
 `PWA_API_BASE_URL` as the absolute HTTPS URL of the scorer API, including its
 API path. For example: `https://api.example.com/api/`. The value is public

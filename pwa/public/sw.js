@@ -1,5 +1,5 @@
 const PREFIX = `fieldbook:${self.registration.scope}:`;
-const CACHE = `${PREFIX}shell-v3`;
+const CACHE = `${PREFIX}shell-v4`;
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'api.js', 'queue.js', 'mode.js', 'demo.js', 'manifest.webmanifest', 'icon.svg']
   .map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))));
