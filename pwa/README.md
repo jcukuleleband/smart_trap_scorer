@@ -39,6 +39,10 @@ Saved demo records are not encrypted, shared, backed up, or official. Pending
 packages use a separate encrypted demo queue. Browser storage can be cleared or
 evicted. AI extraction and the full system requirements are not part of this demo.
 
+The literal placeholder `blank` also selects demo mode. Only `pwa-pages.yml`
+should deploy this site: a generic static workflow uploading the repository root
+will replace the app with a directory that has no root `index.html`, causing 404s.
+
 One-time setup: in repository **Settings > Pages**, select **GitHub Actions** as
 the source. Push to `main` or run **Publish draft PWA to Pages** in Actions. Open
 https://jcukuleleband.github.io/smart_trap_scorer/ on a phone or desktop. After a

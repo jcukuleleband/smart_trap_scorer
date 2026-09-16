@@ -27,6 +27,9 @@ test('Pages build explicitly selects demo or API mode and includes offline demo 
     assert.match(await readFile(new URL('../dist/mode.js',import.meta.url),'utf8'),/demoMode = true/);
     assert.match(await readFile(new URL('../dist/demo.js',import.meta.url),'utf8'),/fieldbook-usability-demo/);
     assert.match(await readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),/'mode.js', 'demo.js'/);
+    run(' blank ');
+    assert.match(await readFile(new URL('../dist/mode.js',import.meta.url),'utf8'),/demoMode = true/);
+    assert.equal(JSON.parse(await readFile(new URL('../dist/config.json',import.meta.url),'utf8')).apiBaseUrl,'');
     run('https://api.example.com/api/');
     assert.match(await readFile(new URL('../dist/mode.js',import.meta.url),'utf8'),/demoMode = false/);
     assert.equal(JSON.parse(await readFile(new URL('../dist/config.json',import.meta.url),'utf8')).apiBaseUrl,'https://api.example.com/api/');
